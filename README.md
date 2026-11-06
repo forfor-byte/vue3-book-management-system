@@ -38,9 +38,19 @@
 - **响应式交互**：适配 PC 与移动端，侧边栏 (Sidebar) 在小屏幕下自动折叠。
 
 ## 🚀 本地启动指南
-
-1. 克隆项目到本地
+ 
+1.**克隆项目到本地**
    ```bash
    git clone https://gitee.com/lyb572006/vue3-book-management-system.git
    cd vue3-book-management-system
    ```
+
+2.**安装依赖**
+ ```bash
+npm install
+```
+
+3.**启动开发服务器**
+```bash
+npm run dev
+```
