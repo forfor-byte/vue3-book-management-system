@@ -42,4 +42,5 @@
 1. 克隆项目到本地
    ```bash
    git clone https://gitee.com/lyb572006/vue3-book-management-system.git
+   cd vue3-book-management-system
    ```
