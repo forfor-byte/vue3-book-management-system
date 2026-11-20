@@ -2,94 +2,125 @@
 import { computed, ref } from 'vue'
 import PageHead from '../components/PageHead.vue'
 import Icon from '../components/Icon.vue'
+import { permissions, users } from '../data'
 
-interface User {
-  username: string
-  name: string
-  email: string
-  phone: string
-  role: '管理员' | '普通用户'
-  status: '启用' | '停用'
-  created: string
-}
-const list = ref<User[]>([
-  { username: 'admin', name: '系统管理员', email: 'admin@example.com', phone: '13800138000', role: '管理员', status: '启用', created: '2023-01-01' },
-  { username: 'zhangsan', name: '张三', email: 'zhangsan@example.com', phone: '13800138001', role: '普通用户', status: '启用', created: '2023-09-01' },
-  { username: 'lisi', name: '李四', email: 'lisi@example.com', phone: '13800138002', role: '普通用户', status: '启用', created: '2023-09-02' },
-  { username: 'wangwu', name: '王五', email: 'wangwu@example.com', phone: '13800138003', role: '普通用户', status: '停用', created: '2022-09-01' },
-  { username: 'zhaoliu', name: '赵六', email: 'zhaoliu@example.com', phone: '13800138004', role: '普通用户', status: '启用', created: '2023-09-05' },
-  { username: 'qianqi', name: '钱七', email: 'qianqi@example.com', phone: '13800138005', role: '普通用户', status: '启用', created: '2022-09-08' },
-])
-
+const list = ref(users.map((u) => ({ ...u })))
 const kw = ref('')
-const role = ref('全部')
+
 const filtered = computed(() =>
-  list.value.filter(
-    (u) =>
-      (role.value === '全部' || u.role === role.value) &&
-      (u.username + u.name + u.email).toLowerCase().includes(kw.value.toLowerCase()),
-  ),
+  list.value.filter((u) => (u.account + u.name + u.dept).toLowerCase().includes(kw.value.trim().toLowerCase())),
 )
+
+const okCount = computed(() => list.value.filter((u) => u.on).length)
+
+const roleTag = (role: string) => {
+  if (role === '管理员') return 'brand'
+  if (role === '编目员') return 'info'
+  if (role === '审核员') return 'warn'
+  return 'mute'
+}
+
+const toast = ref('')
+let timer: number | undefined
+function say(msg: string) {
+  toast.value = msg
+  window.clearTimeout(timer)
+  timer = window.setTimeout(() => (toast.value = ''), 2200)
+}
+
+function toggle(account: string) {
+  const u = list.value.find((x) => x.account === account)
+  if (!u) return
+  u.on = !u.on
+  say(`${u.name} 的登录已${u.on ? '启用' : '停用'}`)
+}
 </script>
 
 <template>
-  <div>
-    <PageHead
-      title="用户管理"
-      desc="管理系统登录账号、角色与权限状态。"
-      actions
-    >
-      <template #actions>
-        <button class="btn"><Icon name="filter" :size="15" />筛选</button>
-        <button class="btn btn-primary"><Icon name="plus" :size="15" />新增用户</button>
-      </template>
+  <div class="page">
+    <PageHead no="06" group="读者" title="用户管理" desc="后台账号与角色权限，开关表示是否启用登录">
+      <button class="btn primary" @click="say('演示操作：新增账号（原型未接后端）')">
+        <Icon name="plus" :size="13" />新增账号
+      </button>
     </PageHead>
 
     <article class="card">
-      <div class="filters card-body">
-        <div class="field"><Icon name="search" :size="15" /><input v-model="kw" class="input" placeholder="用户名 / 姓名 / 邮箱" /></div>
-        <select v-model="role" class="select">
-          <option>全部</option>
-          <option>管理员</option>
-          <option>普通用户</option>
-        </select>
-        <span class="count">共 {{ filtered.length }} 个账号</span>
+      <div class="toolbar">
+        <label class="search">
+          <Icon name="search" :size="14" />
+          <input v-model="kw" type="search" placeholder="检索账号 / 姓名 / 部门" />
+        </label>
+        <div class="spacer" />
+        <span class="note">共 {{ filtered.length }} 个账号 · {{ okCount }} 个已启用</span>
       </div>
 
       <div class="table-wrap">
-        <table class="table">
+        <table>
+          <colgroup>
+            <col style="width: 26%" />
+            <col style="width: 16%" />
+            <col style="width: 22%" />
+            <col style="width: 24%" />
+            <col style="width: 12%" />
+          </colgroup>
           <thead>
-            <tr><th>用户名</th><th>姓名</th><th>邮箱</th><th>手机号</th><th>角色</th><th>状态</th><th>创建时间</th><th style="text-align:right">操作</th></tr>
+            <tr>
+              <th>账号</th>
+              <th>角色</th>
+              <th>部门</th>
+              <th>最近登录</th>
+              <th>启用</th>
+            </tr>
           </thead>
           <tbody>
-            <tr v-for="u in filtered" :key="u.username">
-              <td><b class="cell-main">{{ u.username }}</b></td>
-              <td>{{ u.name }}</td>
-              <td>{{ u.email }}</td>
-              <td class="num">{{ u.phone }}</td>
-              <td><span class="tag" :class="{ 'tag-neutral': u.role !== '管理员' }">{{ u.role }}</span></td>
-              <td><span class="tag" :class="u.status === '启用' ? 'tag-success' : 'tag-danger'">{{ u.status }}</span></td>
-              <td class="num">{{ u.created }}</td>
-              <td style="text-align:right; white-space:nowrap">
-                <button class="btn-link"><Icon name="edit" :size="14" />编辑</button>
-                <button class="btn-link" style="color:var(--danger)"><Icon name="trash" :size="14" />删除</button>
+            <tr v-for="u in filtered" :key="u.account">
+              <td><span class="acc">{{ u.account }}</span></td>
+              <td><span class="tag" :class="roleTag(u.role)">{{ u.role }}</span></td>
+              <td>{{ u.dept }}</td>
+              <td><span class="num">{{ u.last }}</span></td>
+              <td>
+                <span class="sw" :class="{ on: u.on }" role="switch" :aria-checked="u.on" tabindex="0" @click="toggle(u.account)" @keydown.enter.prevent="toggle(u.account)"><i /></span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="pager">
-        <span class="pager-info">第 1-{{ filtered.length }} 条，共 {{ filtered.length }} 条</span>
-        <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(90deg)" /></button>
-        <button class="pg-btn on">1</button>
-        <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(-90deg)" /></button>
-      </div>
+      <div class="pager"><span class="info">共 {{ list.length }} 个账号 · {{ okCount }} 个已启用</span></div>
     </article>
+
+    <article class="card" style="margin-top: 14px">
+      <div class="card-h"><h2>角色权限</h2><span class="note">按角色授予，改动即时生效</span></div>
+      <div class="table-wrap">
+        <table>
+          <colgroup>
+            <col style="width: 38%" />
+            <col style="width: 15%" />
+            <col style="width: 15%" />
+            <col style="width: 15%" />
+            <col style="width: 17%" />
+          </colgroup>
+          <thead>
+            <tr><th>权限项</th><th>管理员</th><th>编目员</th><th>审核员</th><th>读者</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="p in permissions" :key="p.name">
+              <td class="strong">{{ p.name }}</td>
+              <td v-for="(v, i) in p.roles" :key="i">
+                <span class="mk" :class="{ no: !v }">{{ v ? '✓' : '—' }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-b foot">权限变更后会写入操作日志；读者账号仅开放前台借还与书评提交。</div>
+    </article>
+
+    <div class="toast" :class="{ on: !!toast }">{{ toast }}</div>
   </div>
 </template>
 
 <style scoped>
-.cell-main { color: var(--text-1); font-weight: 600; }
-.count { font-size: 13px; color: var(--text-3); margin-left: auto; }
+.acc { font-family: var(--sans); color: var(--ink); }
+.foot { border-top: 1px solid var(--rule-soft); font-size: 11.5px; color: var(--text-3); }
 </style>

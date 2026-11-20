@@ -1,121 +1,111 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import Icon from './Icon.vue'
-import type { Page } from '../data'
+import { metaOf, type Page } from '../data'
 
-defineProps<{ page: Page }>()
-const emit = defineEmits<{ (e: 'toggleSidebar'): void; (e: 'search', kw: string): void }>()
+const props = defineProps<{ page: Page }>()
+const emit = defineEmits<{ (e: 'toggleSidebar'): void }>()
+
+const group = computed(() => metaOf(props.page).group)
+
+const today = computed(() => {
+  const d = new Date()
+  return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`
+})
 </script>
 
 <template>
-  <header class="topbar">
-    <button class="topbar-hamburger" @click="emit('toggleSidebar')" aria-label="菜单">
-      <Icon name="menu" :size="20" />
+  <header class="top">
+    <button class="burger" aria-label="菜单" @click="emit('toggleSidebar')">
+      <Icon name="menu" :size="18" />
     </button>
 
     <div class="crumb">
-      <span>工作台</span>
+      <span class="c0">工作台</span>
+      <i>/</i>
+      <span>{{ group }}</span>
       <i>/</i>
       <b>{{ page }}</b>
     </div>
 
-    <div class="topbar-right">
-      <button class="tb-icon" aria-label="搜索">
-        <Icon name="search" :size="18" />
-      </button>
-      <button class="tb-icon bell" aria-label="通知">
-        <Icon name="bell" :size="18" />
-        <span class="badge">3</span>
-      </button>
-      <div class="divider" />
-      <div class="profile">
-        <span class="p-avatar">管</span>
-        <div class="p-meta">
+    <div class="right">
+      <span class="date">{{ today }}</span>
+      <div class="user">
+        <span class="av">管</span>
+        <div class="ut">
           <b>管理员</b>
-          <small>超级管理员</small>
+          <span>馆务账号</span>
         </div>
-        <Icon name="chevron" :size="14" />
       </div>
     </div>
   </header>
 </template>
 
 <style scoped>
-.topbar {
+.top {
   position: sticky;
   top: 0;
   z-index: 30;
   height: var(--topbar-h);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   padding: 0 24px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--rule-soft);
 }
-.topbar-hamburger {
+.burger {
   display: none;
-  width: 36px; height: 36px;
+  width: 34px;
+  height: 34px;
   place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  color: var(--text-2);
-}
-.crumb { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-3); }
-.crumb b { font-weight: 600; color: var(--text-1); }
-.crumb i { font-style: normal; }
-
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.tb-icon {
-  position: relative;
-  width: 36px; height: 36px;
-  display: grid; place-items: center;
-  border: 0; background: transparent;
-  color: var(--text-3);
-  border-radius: 9px;
-  transition: all 0.18s;
-}
-.tb-icon:hover { background: var(--surface-3); color: var(--text-1); }
-.badge {
-  position: absolute;
-  top: 3px; right: 3px;
-  min-width: 16px; height: 16px;
-  padding: 0 4px;
-  display: grid; place-items: center;
+  border: 1px solid var(--rule);
   border-radius: 8px;
-  background: var(--danger);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
+  background: var(--surface);
+  color: var(--text);
 }
-.divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
-.profile {
+.crumb { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text-3); }
+.crumb i { font-style: normal; color: #c7ccd9; }
+.crumb b { font-weight: 600; color: var(--text); }
+.crumb .c0 { color: var(--text-3); }
+
+.right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.date { font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.user {
   display: flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 10px;
-  transition: background 0.18s;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--rule-soft);
 }
-.profile:hover { background: var(--surface-3); }
-.p-avatar {
-  width: 34px; height: 34px;
-  display: grid; place-items: center;
-  border-radius: 10px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 14px;
+.av {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #8f7bf3, #5b5bd6);
+  color: #fff;
+  font-size: 12px;
   font-weight: 600;
+  flex: none;
 }
-.p-meta { display: flex; flex-direction: column; line-height: 1.25; }
-.p-meta b { font-size: 13px; font-weight: 600; }
-.p-meta small { font-size: 11px; color: var(--text-3); }
-.profile > svg { color: var(--text-3); }
+.ut { line-height: 1.2; }
+.ut b { display: block; font-size: 11.5px; font-weight: 600; color: var(--text); }
+.ut span { display: block; font-size: 10px; color: var(--text-3); margin-top: 1px; }
 
 @media (max-width: 820px) {
-  .topbar-hamburger { display: inline-grid; }
-  .topbar { padding: 0 16px; }
-  .p-meta { display: none; }
+  .top { padding: 0 14px; gap: 10px; }
+  .burger { display: inline-grid; }
+  .crumb .c0, .crumb i:first-of-type { display: none; }
+  .date { display: none; }
+}
+@media (max-width: 560px) {
+  .crumb span:not(.c0), .crumb i { display: none; }
+  .ut { display: none; }
+  .user { background: transparent; border: 0; padding: 0; }
 }
 </style>

@@ -1,102 +1,147 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PageHead from '../components/PageHead.vue'
 import Icon from '../components/Icon.vue'
-import Donut from '../components/Donut.vue'
 import { readers } from '../data'
 
 const kw = ref('')
 const type = ref('全部')
+const types = ['全部', '教师', '研究生', '本科生', '社会读者']
+
 const filtered = computed(() =>
   readers.filter(
     (r) =>
       (type.value === '全部' || r.type === type.value) &&
-      (r.name + r.id + r.dept).includes(kw.value),
+      (r.name + r.id + r.dept).toLowerCase().includes(kw.value.trim().toLowerCase()),
   ),
 )
 
-const typeDist = [
-  { label: '本科生', value: 198, color: '#3455f1' },
-  { label: '研究生', value: 82, color: '#12b886' },
-  { label: '教师', value: 48, color: '#f59f00' },
-]
+const pageSize = 8
+const page = ref(1)
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
+const paged = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+const from = computed(() => (filtered.value.length ? (page.value - 1) * pageSize + 1 : 0))
+const to = computed(() => Math.min(filtered.value.length, page.value * pageSize))
+
+function goPage(n: number) {
+  page.value = Math.min(totalPages.value, Math.max(1, n))
+}
+
+watch([kw, type], () => (page.value = 1))
+
+const stat = (v: string) => readers.filter((r) => r.type === v).length
+const sleeping = computed(() => readers.filter((r) => r.state === '休眠').length)
+
+const toast = ref('')
+let timer: number | undefined
+function say(msg: string) {
+  toast.value = msg
+  window.clearTimeout(timer)
+  timer = window.setTimeout(() => (toast.value = ''), 2200)
+}
+
+const stateTag = (s: string) => (s === '正常' ? 'ok' : s === '待催还' ? 'warn' : 'done')
 </script>
 
 <template>
-  <div>
-    <PageHead title="读者管理" desc="管理读者档案、身份类型与借阅资格。" actions>
-      <template #actions>
-        <button class="btn"><Icon name="filter" :size="15" />筛选</button>
-        <button class="btn btn-primary"><Icon name="plus" :size="15" />新增读者</button>
-      </template>
+  <div class="page">
+    <PageHead no="05" group="读者" title="读者管理" desc="读者证信息与在借情况，休眠读者可批量清理">
+      <button class="btn ghost" @click="say('演示操作：导出读者名单（原型未接后端）')">导出名单</button>
+      <button class="btn primary" @click="say('演示操作：登记读者（原型未接后端）')">
+        <Icon name="plus" :size="13" />登记读者
+      </button>
     </PageHead>
 
-    <section class="stat-grid mini">
-      <div class="card stat-card">
-        <div class="stat-icon"><Icon name="reader" /></div>
-        <div><div class="stat-main">328</div><div class="stat-label">读者总数</div></div>
+    <article class="card">
+      <div class="toolbar">
+        <label class="search">
+          <Icon name="search" :size="14" />
+          <input v-model="kw" type="search" placeholder="检索姓名 / 读者证号 / 院系" />
+        </label>
+        <div class="seg">
+          <button v-for="t in types" :key="t" :class="{ on: type === t }" @click="type = t">{{ t }}</button>
+        </div>
+        <div class="spacer" />
+        <span class="note">共 {{ filtered.length }} 位</span>
       </div>
-      <div class="card stat-card">
-        <div class="stat-icon tone-green"><Icon name="trendingUp" /></div>
-        <div><div class="stat-main">16</div><div class="stat-label">本月新增</div></div>
+
+      <div class="table-wrap">
+        <table class="t-readers">
+          <colgroup>
+            <col style="width: 20%" />
+            <col style="width: 24%" />
+            <col style="width: 14%" />
+            <col style="width: 12%" />
+            <col style="width: 14%" />
+            <col style="width: 12%" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>读者</th>
+              <th>读者证号</th>
+              <th>等级</th>
+              <th>在借</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in paged" :key="r.id">
+              <td>
+                <div class="who">
+                  <span class="av">{{ r.name.slice(0, 1) }}</span>
+                  <span class="nm">{{ r.name }}</span>
+                </div>
+              </td>
+              <td><span class="num">{{ r.id }}</span></td>
+              <td>{{ r.type }}</td>
+              <td><span class="num">{{ r.onLoan }}</span> 册</td>
+              <td><span class="tag" :class="stateTag(r.state)">{{ r.state }}</span></td>
+              <td><button class="btn sm ghost" @click="say(`演示操作：查看 ${r.name} 的详情`)">详情</button></td>
+            </tr>
+            <tr v-if="!filtered.length">
+              <td colspan="6"><div class="empty"><b>没有匹配的读者</b>换个关键词或切换等级</div></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </section>
 
-    <div class="two-col wide-left">
-      <article class="card">
-        <div class="card-head"><h3 class="card-title">读者档案</h3></div>
-        <div class="filters card-body">
-          <div class="field"><Icon name="search" :size="15" /><input v-model="kw" class="input" placeholder="姓名 / 证号 / 院系" /></div>
-          <select v-model="type" class="select">
-            <option>全部</option>
-            <option>本科生</option>
-            <option>研究生</option>
-            <option>教师</option>
-          </select>
-          <span class="count">共 {{ filtered.length }} 人</span>
-        </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr><th>读者证号</th><th>姓名</th><th>性别</th><th>院系</th><th>类型</th><th>联系电话</th><th>加入时间</th><th style="text-align:right">操作</th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="r in filtered" :key="r.id">
-                <td><b class="cell-main">{{ r.id }}</b></td>
-                <td>{{ r.name }}</td>
-                <td>{{ r.gender }}</td>
-                <td>{{ r.dept }}</td>
-                <td><span class="tag" :class="r.type === '教师' ? 'tag-warning' : r.type === '研究生' ? 'tag-success' : ''">{{ r.type }}</span></td>
-                <td class="num">{{ r.phone }}</td>
-                <td class="num">{{ r.joined }}</td>
-                <td style="text-align:right; white-space:nowrap">
-                  <button class="btn-link"><Icon name="edit" :size="14" />编辑</button>
-                  <button class="btn-link" style="color:var(--danger)"><Icon name="trash" :size="14" />删除</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="pager">
-          <span class="pager-info">共 {{ filtered.length }} 条</span>
-          <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(90deg)" /></button>
-          <button class="pg-btn on">1</button>
-          <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(-90deg)" /></button>
-        </div>
-      </article>
+      <div class="pager">
+        <span class="info">第 {{ from }}—{{ to }} 位 · 共 {{ filtered.length }} 位</span>
+        <button v-for="n in totalPages" :key="n" class="pg" :class="{ on: page === n }" @click="goPage(n)">{{ n }}</button>
+        <button class="pg" :disabled="page >= totalPages" @click="goPage(page + 1)">›</button>
+      </div>
+    </article>
 
-      <article class="card">
-        <div class="card-head"><h3 class="card-title">读者类型构成</h3></div>
-        <div class="card-body">
-          <Donut :data="typeDist" :size="180" />
-        </div>
-      </article>
-    </div>
+    <article class="card" style="margin-top: 18px">
+      <div class="meta-strip">
+        <div class="ms-item"><span>教师</span><em>{{ stat('教师') }}<i>位</i></em></div>
+        <div class="ms-item"><span>研究生</span><em>{{ stat('研究生') }}<i>位</i></em></div>
+        <div class="ms-item"><span>本科生</span><em>{{ stat('本科生') }}<i>位</i></em></div>
+        <div class="ms-item"><span>社会读者 / 休眠</span><em>{{ stat('社会读者') }}<i>位</i> · {{ sleeping }}<i>位</i></em></div>
+      </div>
+    </article>
+
+    <div class="toast" :class="{ on: !!toast }">{{ toast }}</div>
   </div>
 </template>
 
 <style scoped>
-.stat-grid.mini { grid-template-columns: repeat(2, 1fr); max-width: 560px; margin-bottom: 16px; }
-.cell-main { color: var(--text-1); font-weight: 600; }
-.count { font-size: 13px; color: var(--text-3); margin-left: auto; }
+.who { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.av {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.nm { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) {
+  .t-readers { min-width: 0; }
+}
 </style>

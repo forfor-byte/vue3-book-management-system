@@ -2,76 +2,115 @@
 import { computed, ref } from 'vue'
 import PageHead from '../components/PageHead.vue'
 import Icon from '../components/Icon.vue'
-import { books } from '../data'
+import { books, categories } from '../data'
 
 const kw = ref('')
 const cat = ref('全部')
-const cats = ['全部', ...Array.from(new Set(books.map((b) => b.category)))]
+const page = ref(1)
+const pageSize = 8
+
+const catNames = ['全部', ...categories.map((c) => c.name)]
 
 const filtered = computed(() =>
-  books.filter(
-    (b) =>
-      (cat.value === '全部' || b.category === cat.value) &&
-      (b.title + b.author + b.isbn).toLowerCase().includes(kw.value.toLowerCase()),
-  ),
+  books.filter((b) => {
+    const hitCat = cat.value === '全部' || b.category === cat.value
+    const q = kw.value.trim().toLowerCase()
+    const hitKw =
+      !q ||
+      b.title.toLowerCase().includes(q) ||
+      b.author.toLowerCase().includes(q) ||
+      b.isbn.includes(q) ||
+      b.callNo.toLowerCase().includes(q)
+    return hitCat && hitKw
+  }),
 )
 
-const stockTotal = books.reduce((s, b) => s + b.stock, 0)
-const borrowTotal = books.reduce((s, b) => s + b.borrows, 0)
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
+const rows = computed(() => {
+  const start = (page.value - 1) * pageSize
+  return filtered.value.slice(start, start + pageSize)
+})
 
-const coverHue = (i: number) => ['#3455f1', '#12b886', '#f59f00', '#e5484d', '#7048e8', '#0ca678'][i % 6]
+function setCat(c: string) {
+  cat.value = c
+  page.value = 1
+}
+
+const toast = ref('')
+let timer: number | undefined
+function say(msg: string) {
+  toast.value = msg
+  window.clearTimeout(timer)
+  timer = window.setTimeout(() => (toast.value = ''), 2200)
+}
+
+const stockTotal = computed(() => books.reduce((s, b) => s + b.stock, 0))
 </script>
 
 <template>
-  <div>
-    <PageHead title="图书管理" desc="馆藏书目维护、库存与定价管理。" actions>
-      <template #actions>
-        <button class="btn"><Icon name="refresh" :size="15" />导入</button>
-        <button class="btn btn-primary"><Icon name="plus" :size="15" />新增图书</button>
-      </template>
+  <div class="page">
+    <PageHead no="02" group="馆藏" title="图书管理" desc="馆藏图书与索书号，按类目归架，在架册数实时结算">
+      <button class="btn ghost" @click="say('演示操作：导出馆藏清单（原型未接后端）')">导出清单</button>
+      <button class="btn primary" @click="say('演示操作：新增图书（原型未接后端）')">
+        <Icon name="plus" :size="13" />新增图书
+      </button>
     </PageHead>
 
-    <section class="stat-grid mini">
-      <div class="card stat-card"><div class="stat-icon"><Icon name="book" /></div><div><div class="stat-main">{{ books.length }}</div><div class="stat-label">书目种数</div></div></div>
-      <div class="card stat-card"><div class="stat-icon tone-green"><Icon name="folder" /></div><div><div class="stat-main">{{ stockTotal }}</div><div class="stat-label">在库册数</div></div></div>
-      <div class="card stat-card"><div class="stat-icon tone-warn"><Icon name="exchange" /></div><div><div class="stat-main">{{ borrowTotal }}</div><div class="stat-label">累计借出</div></div></div>
-    </section>
-
     <article class="card">
-      <div class="filters card-body">
-        <div class="field"><Icon name="search" :size="15" /><input v-model="kw" class="input" placeholder="书名 / 作者 / ISBN" /></div>
-        <select v-model="cat" class="select">
-          <option v-for="c in cats" :key="c">{{ c }}</option>
-        </select>
-        <span class="count">共 {{ filtered.length }} 种</span>
+      <div class="toolbar">
+        <label class="search">
+          <Icon name="search" :size="14" />
+          <input v-model="kw" type="search" placeholder="检索书名 / 作者 / ISBN / 索书号" @input="page = 1" />
+        </label>
+        <div class="seg">
+          <button v-for="c in catNames" :key="c" :class="{ on: cat === c }" @click="setCat(c)">{{ c }}</button>
+        </div>
+        <div class="spacer" />
+        <span class="note">共 {{ filtered.length }} 种 · {{ stockTotal }} 册在架</span>
       </div>
 
       <div class="table-wrap">
-        <table class="table">
+        <table>
+          <colgroup>
+            <col style="width: 27%" />
+            <col style="width: 13%" />
+            <col style="width: 13%" />
+            <col style="width: 15%" />
+            <col style="width: 10%" />
+            <col style="width: 9%" />
+            <col style="width: 13%" />
+          </colgroup>
           <thead>
-            <tr><th>图书</th><th>分类</th><th>作者</th><th>出版社</th><th>定价</th><th>库存</th><th>借阅</th><th>评分</th><th style="text-align:right">操作</th></tr>
+            <tr>
+              <th>书名</th>
+              <th>索书号</th>
+              <th>作者</th>
+              <th>出版社</th>
+              <th>类目</th>
+              <th>在架</th>
+              <th>操作</th>
+            </tr>
           </thead>
           <tbody>
-            <tr v-for="(b, i) in filtered" :key="b.isbn">
+            <tr v-for="b in rows" :key="b.isbn">
               <td>
-                <div class="book-cell">
-                  <span class="mini-cover" :style="{ background: coverHue(i) }">{{ b.title.slice(0, 1) }}</span>
-                  <div>
-                    <b class="cell-main">{{ b.title }}</b>
-                    <small class="cell-sub">{{ b.isbn }}</small>
-                  </div>
+                <div class="bk">
+                  <img class="cover sm" :src="b.cover" :alt="`${b.title}封面`" loading="lazy" />
+                  <span class="bs">{{ b.title }}</span>
                 </div>
               </td>
-              <td><span class="tag">{{ b.category }}</span></td>
+              <td><span class="num">{{ b.callNo }}</span></td>
               <td>{{ b.author }}</td>
-              <td>{{ b.press }}</td>
-              <td class="num">¥{{ b.price }}</td>
-              <td><span class="tag" :class="b.stock < 5 ? 'tag-danger' : b.stock < 10 ? 'tag-warning' : 'tag-success'">{{ b.stock }} 册</span></td>
-              <td class="num">{{ b.borrows }}</td>
-              <td><span class="rating">★ {{ b.rating.toFixed(1) }}</span></td>
-              <td style="text-align:right; white-space:nowrap">
-                <button class="btn-link"><Icon name="edit" :size="14" />编辑</button>
-                <button class="btn-link" style="color:var(--danger)"><Icon name="trash" :size="14" />删除</button>
+              <td class="ell">{{ b.press }}</td>
+              <td>{{ b.category }}</td>
+              <td><span class="num">{{ b.stock }}</span><span class="muted"> / {{ b.stock + 3 }}</span></td>
+              <td>
+                <button class="btn sm ghost" @click="say(`演示操作：查看《${b.title}》详情`)">详情</button>
+              </td>
+            </tr>
+            <tr v-if="!rows.length">
+              <td colspan="7">
+                <div class="empty"><b>没有匹配的馆藏</b>换个关键词或切换类目</div>
               </td>
             </tr>
           </tbody>
@@ -79,30 +118,31 @@ const coverHue = (i: number) => ['#3455f1', '#12b886', '#f59f00', '#e5484d', '#7
       </div>
 
       <div class="pager">
-        <span class="pager-info">共 {{ filtered.length }} 条</span>
-        <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(90deg)" /></button>
-        <button class="pg-btn on">1</button>
-        <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(-90deg)" /></button>
+        <span class="info">共 {{ filtered.length }} 种，当前第 {{ page }} / {{ totalPages }} 页</span>
+        <button class="pg" :disabled="page <= 1" @click="page--">‹</button>
+        <button v-for="p in totalPages" :key="p" class="pg" :class="{ on: p === page }" @click="page = p">{{ p }}</button>
+        <button class="pg" :disabled="page >= totalPages" @click="page++">›</button>
       </div>
     </article>
+
+    <div class="toast" :class="{ on: !!toast }">{{ toast }}</div>
   </div>
 </template>
 
 <style scoped>
-.stat-grid.mini { grid-template-columns: repeat(3, 1fr); max-width: 780px; margin-bottom: 16px; }
-.book-cell { display: flex; align-items: center; gap: 11px; }
-.mini-cover {
+.bk { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cover.sm {
   flex: none;
-  width: 36px; height: 48px;
-  display: grid; place-items: center;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
+  width: 26px;
+  height: 39px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--paper-2);
+  box-shadow: 0 3px 9px -5px rgba(16, 24, 40, 0.6), 0 0 0 1px rgba(16, 24, 40, 0.06);
 }
-.cell-main { display: block; color: var(--text-1); font-weight: 600; }
-.cell-sub { font-size: 12px; color: var(--text-3); }
-.rating { color: #f59f00; font-size: 13px; font-weight: 600; }
-.count { font-size: 13px; color: var(--text-3); margin-left: auto; }
+.bs { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 820px) {
+  .seg { flex-wrap: wrap; }
+}
 </style>

@@ -2,90 +2,98 @@
 import { computed, ref } from 'vue'
 import PageHead from '../components/PageHead.vue'
 import Icon from '../components/Icon.vue'
-import StatCard from '../components/StatCard.vue'
 import { comments } from '../data'
 
-const filter = ref('全部')
+const list = ref(comments.map((c) => ({ ...c })))
+const filter = ref('待审核')
 const kw = ref('')
 
+const filters = ['待审核', '已通过', '已拒绝', '全部']
+
 const filtered = computed(() =>
-  comments.filter(
+  list.value.filter(
     (c) =>
       (filter.value === '全部' || c.status === filter.value) &&
-      (c.book + c.reader).includes(kw.value),
+      (c.book + c.reader + c.content).toLowerCase().includes(kw.value.trim().toLowerCase()),
   ),
 )
 
 const stars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n)
-const statusClass = (s: string) => (s === '已通过' ? 'tag-success' : s === '待审核' ? 'tag-warning' : 'tag-danger')
+
+const toast = ref('')
+let timer: number | undefined
+function say(msg: string) {
+  toast.value = msg
+  window.clearTimeout(timer)
+  timer = window.setTimeout(() => (toast.value = ''), 2200)
+}
+
+function judge(book: string, reader: string, pass: boolean) {
+  const c = list.value.find((x) => x.book === book && x.reader === reader)
+  if (!c) return
+  c.status = pass ? '已通过' : '已拒绝'
+  say(`${reader} 对《${book}》的书评已${pass ? '通过并发布' : '隐藏'}`)
+}
+
+const pending = computed(() => list.value.filter((c) => c.status === '待审核').length)
+const avg = computed(() => {
+  const src = list.value
+  return src.length ? (src.reduce((s, c) => s + c.rating, 0) / src.length).toFixed(1) : '0.0'
+})
 </script>
 
 <template>
-  <div>
-    <PageHead title="评论管理" desc="读者书评的审核与内容质量管理。" actions>
-      <template #actions>
-        <button class="btn"><Icon name="refresh" :size="15" />刷新</button>
-        <button class="btn btn-primary"><Icon name="check" :size="15" />批量通过</button>
-      </template>
+  <div class="page">
+    <PageHead no="08" group="流通" title="评论管理" desc="书评与评分审核，隐藏后不在前台展示">
+      <button class="btn primary" @click="say('演示操作：导出评论（原型未接后端）')">导出评论</button>
     </PageHead>
 
-    <section class="stat-grid">
-      <StatCard icon="comment" value="456" label="评论总数" trend="12% 较上月" up />
-      <StatCard icon="clock" value="7" label="待审核" trend="今日新增 3 条" tone="tone-warn" />
-      <StatCard icon="check" value="428" label="已通过" trend="15% 较上月" up tone="tone-green" />
-      <StatCard icon="x" value="21" label="已拒绝" trend="5% 较上月" tone="tone-red" />
-    </section>
-
     <article class="card">
-      <div class="filters card-body">
-        <div class="field"><Icon name="search" :size="15" /><input v-model="kw" class="input" placeholder="图书 / 读者" /></div>
-        <select v-model="filter" class="select">
-          <option>全部</option>
-          <option>已通过</option>
-          <option>待审核</option>
-          <option>已拒绝</option>
-        </select>
-        <span class="count">共 {{ filtered.length }} 条</span>
+      <div class="card-h">
+        <h2>待审书评</h2>
+        <span class="note">{{ pending }} 条待审 · 平均评分 {{ avg }}</span>
       </div>
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr><th>图书</th><th>读者</th><th>评分</th><th>评论内容</th><th>状态</th><th>评论时间</th><th style="text-align:right">操作</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in filtered" :key="c.book + c.reader">
-              <td><b class="cell-main">{{ c.book }}</b></td>
-              <td>{{ c.reader }}</td>
-              <td><span class="stars">{{ stars(c.rating) }}</span></td>
-              <td class="comment-text" :title="c.content">{{ c.content }}</td>
-              <td><span class="tag" :class="statusClass(c.status)">{{ c.status }}</span></td>
-              <td class="num">{{ c.time }}</td>
-              <td style="text-align:right; white-space:nowrap">
-                <template v-if="c.status === '待审核'">
-                  <button class="btn-link"><Icon name="check" :size="14" />通过</button>
-                  <button class="btn-link" style="color:var(--danger)"><Icon name="x" :size="14" />拒绝</button>
-                </template>
-                <button v-else class="btn-link"><Icon name="edit" :size="14" />详情</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="toolbar" style="border-bottom: 1px solid var(--rule-soft)">
+        <label class="search">
+          <Icon name="search" :size="14" />
+          <input v-model="kw" type="search" placeholder="检索书目 / 读者 / 书评内容" />
+        </label>
+        <div class="seg">
+          <button v-for="f in filters" :key="f" :class="{ on: filter === f }" @click="filter = f">{{ f }}</button>
+        </div>
       </div>
 
-      <div class="pager">
-        <span class="pager-info">共 {{ filtered.length }} 条</span>
-        <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(90deg)" /></button>
-        <button class="pg-btn on">1</button>
-        <button class="pg-btn" disabled><Icon name="chevron" :size="14" style="transform:rotate(-90deg)" /></button>
+      <div class="card-b" style="padding-top: 2px; padding-bottom: 6px">
+        <div v-for="c in filtered" :key="c.book + c.reader" class="cm">
+          <div class="cm-h">
+            <span class="cm-av">{{ c.reader.slice(0, 1) }}</span>
+            <b>{{ c.reader }}</b>
+            <span>评《{{ c.book }}》</span>
+            <span style="color: var(--rule)">·</span>
+            <span>{{ c.time }}</span>
+            <span class="stars">{{ stars(c.rating) }}</span>
+          </div>
+          <p>{{ c.content }}</p>
+          <div class="acts">
+            <template v-if="c.status === '待审核'">
+              <button class="btn sm ghost" @click="judge(c.book, c.reader, true)">通过</button>
+              <button class="btn sm ghost" @click="judge(c.book, c.reader, false)">隐藏</button>
+              <span class="note">未审核前不在前台展示</span>
+            </template>
+            <template v-else>
+              <span class="tag" :class="c.status === '已通过' ? 'ok' : 'done'">{{ c.status }}</span>
+              <button class="btn sm ghost" @click="c.status = '待审核'; say('已退回待审队列')">撤回</button>
+            </template>
+          </div>
+        </div>
+
+        <div v-if="!filtered.length" class="empty">
+          <b>这一类暂时没有书评</b>切换筛选或清空检索词
+        </div>
       </div>
     </article>
+
+    <div class="toast" :class="{ on: !!toast }">{{ toast }}</div>
   </div>
 </template>
-
-<style scoped>
-.cell-main { color: var(--text-1); font-weight: 600; }
-.stars { color: #f59f00; letter-spacing: 1px; }
-.comment-text { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.count { font-size: 13px; color: var(--text-3); margin-left: auto; }
-</style>

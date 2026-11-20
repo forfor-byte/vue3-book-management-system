@@ -40,45 +40,32 @@ function go(page: Page) {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="shell">
     <Sidebar :active="active" :open="sidebarOpen" @select="go" />
 
     <div v-if="sidebarOpen" class="scrim" @click="sidebarOpen = false" />
 
-    <div class="app-main">
+    <div class="main">
       <Topbar :page="active" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
       <main class="content">
         <component :is="current" :key="active" />
       </main>
-      <footer class="app-foot">墨卷 · 图书管理系统 © 2026</footer>
     </div>
   </div>
 </template>
 
 <style scoped>
-.app-shell { min-height: 100vh; display: flex; }
-.app-main {
-  flex: 1;
-  min-width: 0;
-  margin-left: var(--sidebar-w);
-  display: flex;
-  flex-direction: column;
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100vh;
-  transition: margin-left 0.28s ease;
+  transition: grid-template-columns 0.24s ease;
 }
-.content { flex: 1; padding: 24px 28px 12px; width: 100%; max-width: 1440px; margin: 0 auto; }
-.app-foot { padding: 18px 28px 22px; text-align: center; font-size: 12px; color: var(--text-3); }
-
-.scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 35;
-  background: rgba(16, 23, 34, 0.45);
-  backdrop-filter: blur(2px);
-}
+.main { min-width: 0; display: flex; flex-direction: column; }
+.content { flex: 1; width: 100%; }
+.scrim { position: fixed; inset: 0; z-index: 45; background: rgba(16, 24, 40, 0.42); }
 
 @media (max-width: 820px) {
-  .app-main { margin-left: 0; }
-  .content { padding: 18px 16px 10px; }
+  .shell { grid-template-columns: 1fr; }
 }
 </style>
