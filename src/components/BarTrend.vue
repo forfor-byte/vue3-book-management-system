@@ -56,7 +56,7 @@ function tierOf(v: number) {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(to bottom, rgba(16, 24, 40, 0.07) 0 1px, transparent 1px 25%);
+  background: repeating-linear-gradient(to bottom, var(--grid-line) 0 1px, transparent 1px 25%);
 }
 .tick {
   position: absolute;
@@ -105,6 +105,6 @@ function tierOf(v: number) {
 .bar.peak { background: linear-gradient(180deg, #ffd166, #f79009); }
 .col:hover .bar { filter: brightness(0.94) saturate(1.2); }
 .lb { height: 22px; line-height: 22px; font-size: 9.5px; color: var(--text-3); text-align: center; white-space: nowrap; }
-.lb.lt3 { color: #5b5bd6; font-weight: 600; }
-.lb.lt4 { color: #d97706; font-weight: 700; }
+.lb.lt3 { color: var(--brand); font-weight: 600; }
+.lb.lt4 { color: var(--amber); font-weight: 700; }
 </style>

@@ -56,16 +56,27 @@ function go(page: Page) {
 
 <style scoped>
 .shell {
-  display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100vh;
-  transition: grid-template-columns 0.24s ease;
 }
-.main { min-width: 0; display: flex; flex-direction: column; }
-.content { flex: 1; width: 100%; }
+.main {
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.24s ease;
+}
+.content {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  background:
+    radial-gradient(circle at 82% 4%, rgba(82, 103, 199, 0.055), transparent 26rem),
+    radial-gradient(circle at 8% 92%, rgba(65, 160, 180, 0.035), transparent 24rem);
+}
 .scrim { position: fixed; inset: 0; z-index: 45; background: rgba(16, 24, 40, 0.42); }
 
 @media (max-width: 820px) {
-  .shell { grid-template-columns: 1fr; }
+  .main { margin-left: 0; }
 }
 </style>

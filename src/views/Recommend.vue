@@ -72,7 +72,7 @@ function say(msg: string) {
 </template>
 
 <style scoped>
-.rate { margin-left: auto; color: #b56a00; font-weight: 600; }
+.rate { margin-left: auto; color: var(--amber); font-weight: 600; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 1000px) {
   .two { grid-template-columns: 1fr; }

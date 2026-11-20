@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import PageHead from '../components/PageHead.vue'
-import BarTrend from '../components/BarTrend.vue'
+import AreaTrend from '../components/AreaTrend.vue'
 import MeterBars from '../components/MeterBars.vue'
 import RankList from '../components/RankList.vue'
 import { books, categoryShare, flow, overview, trend } from '../data'
@@ -26,6 +26,14 @@ const hotBooks = computed(() =>
 )
 
 const catColors = ['#5b5bd6', '#2e90fa', '#12b76a', '#f79009', '#9a5cf0', '#f04438']
+
+/** 月度 / 累计（累计＝逐月相加，直接由 trend 现算） */
+const mode = ref<'month' | 'cum'>('month')
+const trendData = computed(() =>
+  mode.value === 'month'
+    ? trend
+    : trend.map((d, i) => ({ label: d.label, value: trend.slice(0, i + 1).reduce((s, x) => s + x.value, 0) })),
+)
 
 const flowTag = (act: string) => {
   if (act === '逾期') return 'over'
@@ -68,9 +76,12 @@ const flowTag = (act: string) => {
       <article class="card">
         <div class="card-h">
           <h2>借阅走势</h2>
-          <span class="note">2026 年 1—10 月 · 单位：册</span>
+          <div class="mini">
+            <button :class="{ on: mode === 'month' }" @click="mode = 'month'">月度</button>
+            <button :class="{ on: mode === 'cum' }" @click="mode = 'cum'">累计</button>
+          </div>
         </div>
-        <div class="card-b"><BarTrend :data="trend" unit="册" /></div>
+        <div class="card-b"><AreaTrend :data="trendData" unit="册" /></div>
       </article>
 
       <article class="card">
@@ -115,6 +126,17 @@ const flowTag = (act: string) => {
 
 <style scoped>
 .two { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-top: 14px; align-items: start; }
+.mini { display: inline-flex; padding: 2px; gap: 2px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--rule-soft); }
+.mini button {
+  border: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 10.5px;
+  transition: background 0.15s, color 0.15s;
+}
+.mini button.on { background: var(--surface); color: var(--brand); font-weight: 600; box-shadow: var(--shadow-sm); }
 @media (max-width: 1000px) {
   .two { grid-template-columns: 1fr; }
 }

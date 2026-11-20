@@ -121,7 +121,7 @@ const minis = computed(() => books.filter((b) => b.category === cur.value.name).
 .footnote { border-top: 1px solid var(--rule-soft); font-size: 11.5px; color: var(--text-3); line-height: 1.7; }
 .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat.on { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(91, 91, 214, 0.1); }
-tbody tr.sel { background: #f1f1fe; }
+tbody tr.sel { background: var(--brand-soft); }
 .sub { display: grid; grid-template-columns: 4.6em 1fr 3em; gap: 9px; align-items: center; margin-bottom: 9px; }
 .sn { font-size: 11.5px; color: var(--text-2); }
 .sk { height: 8px; border-radius: 999px; background: var(--surface-2); display: block; overflow: hidden; }

@@ -152,7 +152,7 @@ function say(msg: string) {
   padding: 15px 18px;
   border-radius: var(--radius);
   border: 1px solid var(--rule-soft);
-  background: linear-gradient(120deg, #f5f4ff, #ffffff 60%);
+  background: linear-gradient(120deg, var(--brand-soft), var(--surface) 60%);
 }
 .stamp.small {
   width: 54px;
